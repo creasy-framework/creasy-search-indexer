@@ -1,0 +1,41 @@
+{
+  "entityType": "User",
+  "entitySchema": {
+    "type": "object",
+    "properties": {
+      "userId": {
+        "type": "string"
+      },
+      "displayName": {
+        "type": "string"
+      },
+      "displayName2": {
+        "type": "string"
+      },
+      "titles": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "organizationIds": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "refType": "Organization"
+        }
+      },
+      "supervisorId": {
+        "type": "string",
+        "refType": "User"
+      }
+    },
+    "required": [
+      "userId",
+      "displayName",
+      "organizationId"
+    ]
+  },
+  "version": 1,
+  "fingerprint": "eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJ1c2VySWQiOnsidHlwZSI6InN0cmluZyJ9LCJkaXNwbGF5TmFtZSI6eyJ0eXBlIjoic3RyaW5nIn0sImRpc3BsYXlOYW1lMiI6eyJ0eXBlIjoic3RyaW5nIn0sInRpdGxlcyI6e"
+}

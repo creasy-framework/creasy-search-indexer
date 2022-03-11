@@ -1,0 +1,21 @@
+{
+  "entityType": "Group",
+  "entitySchema": {
+    "type": "object",
+    "properties": {
+      "groupId": {
+        "type": "string"
+      },
+      "displayName": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "displayName",
+      "groupId"
+    ]
+  },
+  "version": 1,
+  "fingerprint": "eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJncm91cElkIjp7InR5cGUiOiJzdHJpbmcifSwiZGlzcGxheU5hbWUiOnsidHlwZSI6InN0cmluZyJ9fSwicmVxdWlyZWQiOlsiZGlzcGxheU5hbWUiLCJncm91cElkIl19",
+  "createdAt": 1646804539670
+}

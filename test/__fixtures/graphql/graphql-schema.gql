@@ -1,0 +1,24 @@
+type Query {
+  user(userId: String): User
+  organization(organizationId: String): Organization
+  group(groupId: String): Group
+}
+type User {
+  userId: String
+  displayName: String
+  titles: [String]
+  organization: [Organization]
+  supervisor: User
+  User_by_supervisorId: [User]
+}
+type Organization {
+  organizationId: String
+  displayName: String
+  group: Group
+  User_by_organizationIds: [User]
+}
+type Group {
+  groupId: String
+  displayName: String
+  Organization_by_groupId: [Organization]
+}

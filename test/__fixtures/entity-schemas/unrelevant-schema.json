@@ -1,0 +1,21 @@
+{
+  "entityType": "Misc",
+  "entitySchema": {
+    "type": "object",
+    "properties": {
+      "miscId": {
+        "type": "string"
+      },
+      "displayName": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "displayName",
+      "miscId"
+    ]
+  },
+  "version": 1,
+  "fingerprint": "eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJncm91cElkIjp7InR5cGUiOiJzdHJpbmcifSwiZGlzcGxheU5hbWUiOnsidHlwZSI6InN0cmluZyJ9fSwicmVxdWlyZWQiOlsiZGlzcGxheU5hbWUiLCJncm91cElkIl19",
+  "createdAt": 1646804539670
+}

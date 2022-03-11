@@ -1,0 +1,25 @@
+{
+  "entityType": "Organization",
+  "entitySchema": {
+    "type": "object",
+    "properties": {
+      "organizationId": {
+        "type": "string"
+      },
+      "displayName": {
+        "type": "string"
+      },
+      "groupId": {
+        "type": "string",
+        "refType": "Group"
+      }
+    },
+    "required": [
+      "displayName",
+      "organizationId"
+    ]
+  },
+  "version": 1,
+  "fingerprint": "eyJ0eXBlIjoib2JqZWN0IiwicHJvcGVydGllcyI6eyJvcmdhbml6YXRpb25JZCI6eyJ0eXBlIjoic3RyaW5nIn0sImRpc3BsYXlOYW1lIjp7InR5cGUiOiJzdHJpbmcifSwiZ3JvdXBJZCI6eyJ0eXBlIjoic3RyaW5nIiwicmVmVHlwZSI6Ikdyb3VwIn19LCJyZXF1aXJlZCI6WyJkaXNwbGF5TmFtZSIsIm9yZ2FuaXphdGlvbklkIl19",
+  "createdAt": 1646804539670
+}
