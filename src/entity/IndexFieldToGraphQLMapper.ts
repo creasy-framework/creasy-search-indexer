@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { jsonToGraphQLQuery } from 'json-to-graphql-query';
 import { FieldIndexOption } from '../configuration';
-import * as OS from 'os';
+import camelCase from 'camelcase';
 
 interface IndexFieldTree {
   name: string;
@@ -31,9 +31,9 @@ export class IndexFieldToGraphQLMapper {
 
   map(entityType: string, id: any, fields: FieldIndexOption[]) {
     const query = {
-      [entityType.toLowerCase()]: {
+      [camelCase(entityType)]: {
         __args: {
-          [`${entityType.toLowerCase()}Id`]: id,
+          [`${camelCase(entityType)}Id`]: id,
         },
         ...this.parse(fields),
       },

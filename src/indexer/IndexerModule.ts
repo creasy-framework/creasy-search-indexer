@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
 import { EntityModule } from '../entity/EntityModule';
 import { EntityIndexer } from './EntityIndexer';
+import { IndexModule } from '../index';
 
 @Module({
-  imports: [EntityModule],
+  imports: [EntityModule, IndexModule],
   providers: [EntityIndexer],
   exports: [EntityIndexer],
 })

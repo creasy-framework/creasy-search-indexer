@@ -6,6 +6,7 @@ import {
   ENTITY_INDEXING_EVENT_SUFFIX,
 } from './Constants';
 import { SchemaService } from '../entity/SchemaService';
+import { IndexRepository } from '../index/IndexRepository';
 
 @Injectable()
 export class EntityReactor {
@@ -15,6 +16,7 @@ export class EntityReactor {
   constructor(
     private configService: ConfigService,
     private schemaService: SchemaService,
+    private indexRepository: IndexRepository,
   ) {
     this.entityType = this.configService.get<string>('entity.type');
   }
@@ -58,13 +60,49 @@ export class EntityReactor {
     };
   }
 
+  private async execute(entityType: string, id: any) {
+    try {
+      if (entityType === this.entityType) {
+        this.logger.log({
+          message: 'Received entity published event',
+          entityType,
+          id,
+        });
+        return Promise.resolve([id]);
+      } else {
+        const dependencies = await this.schemaService.getDependencies();
+        if (dependencies[entityType] && dependencies[entityType].length > 0) {
+          this.logger.log({
+            message: 'Received dependent entity published event',
+            entityType,
+            id,
+            paths: dependencies[entityType],
+          });
+          const ids = await this.indexRepository.getIdsByDependency(
+            this.entityType,
+            entityType,
+            id,
+            dependencies[entityType],
+          );
+          return new Promise<any[]>((r) => r(ids));
+        }
+      }
+    } catch (error) {
+      this.logger.error({
+        message: `Failed to extract indexing request ${this.entityType} ${id}`,
+        error,
+      });
+    }
+    return Promise.resolve([]);
+  }
+
   private async createStream(entityType: string) {
     const kafkaStreams = new KafkaStreams(this.getStreamConfig());
     const stream = kafkaStreams.getKStream();
     (kafkaStreams as any).on('error', (error) =>
       this.logger.error({
-        message: 'Failed to start reactor stream',
-        error: error.message,
+        message: 'Unexpected error in reactor stream',
+        error,
       }),
     );
     await stream
@@ -73,22 +111,14 @@ export class EntityReactor {
       .mapWrapKafkaValue()
       .asyncMap(async (message) => {
         const { entityType, id } = message;
-        this.logger.log({
-          message: 'Received entity published event',
-          payload: message,
-        });
-        if (entityType === entityType) {
-          return Promise.resolve([id]);
-        } else {
-          const dependencies = await this.schemaService.getDependencies();
-          if (dependencies[entityType]) {
-            return new Promise<any[]>((r) => r([1, 2, 3]));
-          }
-        }
-        return Promise.resolve([]);
+        return this.execute(entityType, id);
       })
       .concatMap((ids) => stream.getNewMostFrom(ids.map((id) => ({ id }))))
-      .to(`${this.entityType}${ENTITY_INDEXING_EVENT_SUFFIX}`, 1, 'buffer');
+      .to(
+        `${this.entityType}${ENTITY_INDEXING_EVENT_SUFFIX}`,
+        'auto',
+        'buffer',
+      );
 
     await stream.start();
     this.logger.log({ message: `${entityType} entity reactor started` });

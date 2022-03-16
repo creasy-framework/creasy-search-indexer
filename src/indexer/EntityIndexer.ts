@@ -1,8 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { KafkaStreams, KafkaStreamsConfig } from 'kafka-streams';
 import { ConfigService } from '@nestjs/config';
+import camelCase from 'camelcase';
 import { ENTITY_INDEXING_EVENT_SUFFIX } from './Constants';
 import { EntityService } from '../entity/EntityService';
+import { IndexRepository } from '../index/IndexRepository';
 
 @Injectable()
 export class EntityIndexer {
@@ -12,6 +14,7 @@ export class EntityIndexer {
   constructor(
     private configService: ConfigService,
     private entityService: EntityService,
+    private indexRepository: IndexRepository,
   ) {
     this.entityType = this.configService.get<string>('entity.type');
   }
@@ -55,15 +58,25 @@ export class EntityIndexer {
     };
   }
 
+  private async execute(id: any) {
+    try {
+      const { data } = await this.entityService.getEntityById(id);
+      await this.indexRepository.index(
+        this.entityType,
+        id,
+        data[camelCase(this.entityType)],
+      );
+    } catch (e) {
+      this.logger.error({
+        message: `Failed to index entity ${this.entityType}(${id})`,
+        error: e,
+      });
+    }
+  }
+
   private async createStream(entityType: string) {
     const kafkaStreams = new KafkaStreams(this.getStreamConfig());
     const stream = kafkaStreams.getKStream();
-    (kafkaStreams as any).on('error', (error) =>
-      this.logger.error({
-        message: 'Failed to start index stream',
-        error: error.message,
-      }),
-    );
     stream
       .from(`${this.entityType}${ENTITY_INDEXING_EVENT_SUFFIX}`)
       .mapJSONConvenience()
@@ -74,11 +87,14 @@ export class EntityIndexer {
           payload: message,
         });
         const { id } = message;
-        this.entityService
-          .getEntityById(id)
-          .then((entity) => this.logger.log(JSON.stringify(entity)));
-      });
-
+        this.execute(id);
+      })
+      .catch((error) =>
+        this.logger.error({
+          message: 'Unexpected error in index stream',
+          error,
+        }),
+      );
     await stream.start();
     this.logger.log({ message: `${entityType} entity indexer started` });
   }

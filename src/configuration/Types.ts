@@ -5,14 +5,17 @@ export interface FieldIndexOption {
 }
 
 export interface IndexerConfiguration extends ConfigObject {
-  brokers: string;
   entity: {
     type: string;
     store: string;
   };
   index: {
-    type: 'elasticsearch';
+    provider: 'elasticsearch';
     brokers: string[];
     fields: FieldIndexOption[];
+  };
+  event: {
+    provider: 'kafka';
+    brokers: string;
   };
 }

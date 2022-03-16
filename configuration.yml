@@ -1,12 +1,13 @@
 ---
 event:
+  provider: kafka
   brokers: "127.0.0.1:9092"
 entity:
   type: "User"
   store-address: "http://127.0.0.1:3000"
 index:
-  type: elasticsearch
-  brokers:
+  provider: elasticsearch
+  hosts:
     - "http://localhost:9200"
   fields:
     -  name: "userId"
