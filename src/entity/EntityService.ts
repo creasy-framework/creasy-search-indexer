@@ -6,6 +6,6 @@ export class EntityService {
   constructor(private repository: EntityRepository) {}
 
   async getEntityById(id: any) {
-    return this.repository.getEntityById(id);
+    return await this.repository.getEntityById(id);
   }
 }

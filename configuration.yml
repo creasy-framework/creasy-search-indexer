@@ -9,6 +9,9 @@ index:
   provider: elasticsearch
   hosts:
     - "http://localhost:9200"
+  retryPolicy:
+    maxRetries: 5
+    retryInterval: 5000
   fields:
     -  name: "userId"
     -  name: "displayName"

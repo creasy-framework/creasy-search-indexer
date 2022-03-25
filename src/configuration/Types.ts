@@ -4,6 +4,11 @@ export interface FieldIndexOption {
   name: string;
 }
 
+export interface RetryPolicy {
+  maxRetries: number;
+  retryInterval: number;
+}
+
 export interface IndexerConfiguration extends ConfigObject {
   entity: {
     type: string;
@@ -17,5 +22,6 @@ export interface IndexerConfiguration extends ConfigObject {
   event: {
     provider: 'kafka';
     brokers: string;
+    tryPolicy: RetryPolicy;
   };
 }

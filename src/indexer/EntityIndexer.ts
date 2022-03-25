@@ -5,6 +5,8 @@ import camelCase from 'camelcase';
 import { ENTITY_INDEXING_EVENT_SUFFIX } from './Constants';
 import { EntityService } from '../entity/EntityService';
 import { IndexRepository } from '../index/IndexRepository';
+import { IndexMessage } from './Types';
+import { EntityIndexRetryer } from '../retryer/EntityIndexRetryer';
 
 @Injectable()
 export class EntityIndexer {
@@ -15,6 +17,7 @@ export class EntityIndexer {
     private configService: ConfigService,
     private entityService: EntityService,
     private indexRepository: IndexRepository,
+    private retryer: EntityIndexRetryer,
   ) {
     this.entityType = this.configService.get<string>('entity.type');
   }
@@ -59,19 +62,12 @@ export class EntityIndexer {
   }
 
   private async execute(id: any) {
-    try {
-      const { data } = await this.entityService.getEntityById(id);
-      await this.indexRepository.index(
-        this.entityType,
-        id,
-        data[camelCase(this.entityType)],
-      );
-    } catch (e) {
-      this.logger.error({
-        message: `Failed to index entity ${this.entityType}(${id})`,
-        error: e,
-      });
-    }
+    const { data } = await this.entityService.getEntityById(id);
+    await this.indexRepository.index(
+      this.entityType,
+      id,
+      data[camelCase(this.entityType)],
+    );
   }
 
   private async createStream(entityType: string) {
@@ -81,13 +77,23 @@ export class EntityIndexer {
       .from(`${this.entityType}${ENTITY_INDEXING_EVENT_SUFFIX}`)
       .mapJSONConvenience()
       .mapWrapKafkaValue()
-      .forEach((message) => {
+      .forEach((message: IndexMessage) => {
         this.logger.log({
           message: 'Received entity index event',
           payload: message,
         });
         const { id } = message;
-        this.execute(id);
+        this.execute(id).catch((error) => {
+          this.logger.error({
+            message: `Failed to index entity ${this.entityType}(${id})`,
+            error: error,
+          });
+          this.retryer.retry(
+            `${this.entityType}${ENTITY_INDEXING_EVENT_SUFFIX}`,
+            message,
+            error,
+          );
+        });
       })
       .catch((error) =>
         this.logger.error({
