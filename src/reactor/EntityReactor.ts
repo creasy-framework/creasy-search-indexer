@@ -62,14 +62,15 @@ export class EntityReactor {
     };
   }
 
-  private async execute(entityType: string, id: any) {
+  private async execute(entityType: string, id: any, correlationId: string) {
     if (entityType === this.entityType) {
       this.logger.log({
         message: 'Received entity published event',
         entityType,
         id,
+        correlationId,
       });
-      return Promise.resolve([id]);
+      return [{ correlationId, id }];
     } else {
       const dependencies = await this.schemaService.getDependencies();
       if (dependencies[entityType] && dependencies[entityType].length > 0) {
@@ -77,6 +78,7 @@ export class EntityReactor {
           message: 'Received dependent entity published event',
           entityType,
           id,
+          correlationId,
           paths: dependencies[entityType],
         });
         const ids = await this.indexRepository.getIdsByDependency(
@@ -85,7 +87,7 @@ export class EntityReactor {
           id,
           dependencies[entityType],
         );
-        return new Promise<any[]>((r) => r(ids));
+        return ids.map((id) => ({ correlationId, id }));
       }
     }
     return Promise.resolve([]);
@@ -105,21 +107,29 @@ export class EntityReactor {
       .mapJSONConvenience()
       .mapWrapKafkaValue()
       .asyncMap(async (message) => {
-        const { entityType, id } = message;
+        const { correlationId, data } = message;
+        const { entityType, id } = data;
         try {
-          return await this.execute(entityType, id);
+          return await this.execute(entityType, id, correlationId);
         } catch (error) {
           this.logger.error({
             message: `Failed to extract indexing request ${this.entityType}(${id})`,
-            error,
+            error: error.message,
+            correlationId,
           });
           this.retryer.retry(ENTITY_PUBLISHED_EVENT, message, error);
           return Promise.resolve([]);
         }
       })
-      .concatMap((ids) =>
-        entityStream.getNewMostFrom(ids.map((id) => ({ id }))),
-      )
+      .concatMap((messages) => {
+        if (messages.length > 0) {
+          this.logger.log({
+            message: `Resolved (${messages.length}) entity ids`,
+            messages,
+          });
+        }
+        return entityStream.getNewMostFrom(messages);
+      })
       .to(
         `${this.entityType}${ENTITY_INDEXING_EVENT_SUFFIX}`,
         'auto',

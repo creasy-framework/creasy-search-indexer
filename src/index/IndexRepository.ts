@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client } from '@elastic/elasticsearch';
-import camelCase from 'camelcase';
 @Injectable()
 export class IndexRepository {
   private esClient;
@@ -31,9 +30,7 @@ export class IndexRepository {
     dependentEntityId: any,
     dependentPaths: string[],
   ) {
-    const fields = dependentPaths.map(
-      (path) => `${path}.${camelCase(dependentEntityType)}Id.keyword`,
-    );
+    const fields = dependentPaths.map((path) => `${path}.id.keyword`);
     const query = {
       multi_match: {
         query: dependentEntityId,

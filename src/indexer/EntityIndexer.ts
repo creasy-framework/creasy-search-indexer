@@ -78,15 +78,17 @@ export class EntityIndexer {
       .mapJSONConvenience()
       .mapWrapKafkaValue()
       .forEach((message: IndexMessage) => {
+        const { id, correlationId } = message;
         this.logger.log({
           message: 'Received entity index event',
+          correlationId,
           payload: message,
         });
-        const { id } = message;
         this.execute(id).catch((error) => {
           this.logger.error({
             message: `Failed to index entity ${this.entityType}(${id})`,
-            error: error,
+            correlationId,
+            error: error.message,
           });
           this.retryer.retry(
             `${this.entityType}${ENTITY_INDEXING_EVENT_SUFFIX}`,
