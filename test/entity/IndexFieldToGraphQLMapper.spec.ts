@@ -2,8 +2,8 @@ import { IndexFieldToGraphQLMapper } from '../../src/entity/IndexFieldToGraphQLM
 
 describe('IndexFieldToGraphQLMapper', () => {
   it('map method should return correct graphql', () => {
-    const expected = `user (userId: "123") {
-    userId
+    const expected = `{user (id: "123") {
+    id
     displayName
     organization {
         organizationId
@@ -13,9 +13,9 @@ describe('IndexFieldToGraphQLMapper', () => {
             displayName
         }
     }
-}`;
+}}`;
     const actual = new IndexFieldToGraphQLMapper().map('User', '123', [
-      { name: 'userId' },
+      { name: 'id' },
       { name: 'displayName' },
       { name: 'organization.organizationId' },
       { name: 'organization.displayName' },

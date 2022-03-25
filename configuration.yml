@@ -13,11 +13,11 @@ index:
     maxRetries: 5
     retryInterval: 5000
   fields:
-    -  name: "userId"
+    -  name: "id"
     -  name: "displayName"
-    -  name: "organization.organizationId"
+    -  name: "organization.id"
     -  name: "organization.displayName"
-    -  name: "organization.group.groupId"
+    -  name: "organization.group.id"
     -  name: "organization.group.displayName"
 
 

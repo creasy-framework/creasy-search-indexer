@@ -1,10 +1,10 @@
 type Query {
-  user(userId: String): User
-  organization(organizationId: String): Organization
-  group(groupId: String): Group
+  user(id: String): User
+  organization(id: String): Organization
+  group(id: String): Group
 }
 type User {
-  userId: String
+  id: String
   displayName: String
   titles: [String]
   organization: [Organization]
@@ -12,13 +12,13 @@ type User {
   User_by_supervisorId: [User]
 }
 type Organization {
-  organizationId: String
+  id: String
   displayName: String
   group: Group
   User_by_organizationIds: [User]
 }
 type Group {
-  groupId: String
+  id: String
   displayName: String
   Organization_by_groupId: [Organization]
 }

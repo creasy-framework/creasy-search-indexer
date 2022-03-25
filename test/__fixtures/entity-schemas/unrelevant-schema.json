@@ -3,7 +3,7 @@
   "entitySchema": {
     "type": "object",
     "properties": {
-      "miscId": {
+      "id": {
         "type": "string"
       },
       "displayName": {

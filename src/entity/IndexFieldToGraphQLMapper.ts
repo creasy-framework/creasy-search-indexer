@@ -33,7 +33,7 @@ export class IndexFieldToGraphQLMapper {
     const query = {
       [camelCase(entityType)]: {
         __args: {
-          [`${camelCase(entityType)}Id`]: id,
+          id,
         },
         ...this.parse(fields),
       },

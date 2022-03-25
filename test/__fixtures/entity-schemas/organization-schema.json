@@ -3,7 +3,7 @@
   "entitySchema": {
     "type": "object",
     "properties": {
-      "organizationId": {
+      "id": {
         "type": "string"
       },
       "displayName": {

@@ -3,7 +3,7 @@
   "entitySchema": {
     "type": "object",
     "properties": {
-      "userId": {
+      "id": {
         "type": "string"
       },
       "displayName": {
@@ -31,7 +31,7 @@
       }
     },
     "required": [
-      "userId",
+      "id",
       "displayName",
       "organizationId"
     ]
