@@ -65,7 +65,7 @@ export class EntityReactor {
   private async execute(entityType: string, id: any, correlationId: string) {
     if (entityType === this.entityType) {
       this.logger.log({
-        message: 'Received entity published event',
+        msg: 'Received entity published event',
         entityType,
         id,
         correlationId,
@@ -75,7 +75,7 @@ export class EntityReactor {
       const dependencies = await this.schemaService.getDependencies();
       if (dependencies[entityType] && dependencies[entityType].length > 0) {
         this.logger.log({
-          message: 'Received dependent entity published event',
+          msg: 'Received dependent entity published event',
           entityType,
           id,
           correlationId,
@@ -98,7 +98,7 @@ export class EntityReactor {
     const entityStream = kafkaStreams.getKStream();
     (kafkaStreams as any).on('error', (error) =>
       this.logger.error({
-        message: 'Unexpected error in reactor stream',
+        msg: 'Unexpected error in reactor stream',
         error,
       }),
     );
@@ -113,7 +113,7 @@ export class EntityReactor {
           return await this.execute(entityType, id, correlationId);
         } catch (error) {
           this.logger.error({
-            message: `Failed to extract indexing request ${this.entityType}(${id})`,
+            msg: `Failed to extract indexing request ${this.entityType}(${id})`,
             error: error.message,
             correlationId,
           });
@@ -124,8 +124,8 @@ export class EntityReactor {
       .concatMap((messages) => {
         if (messages.length > 0) {
           this.logger.log({
-            message: `Resolved (${messages.length}) entity ids`,
-            messages,
+            msg: `Resolved (${messages.length}) entity ids`,
+            indexingEntities: messages,
           });
         }
         return entityStream.getNewMostFrom(messages);
@@ -138,7 +138,7 @@ export class EntityReactor {
 
     await entityStream.start();
 
-    this.logger.log({ message: `${entityType} entity reactor started` });
+    this.logger.log({ msg: `${entityType} entity reactor started` });
   }
 
   async onModuleInit() {

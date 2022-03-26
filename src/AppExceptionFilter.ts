@@ -15,7 +15,7 @@ export class AppExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
     const status = HttpStatus.INTERNAL_SERVER_ERROR;
-    response.status(status);
+    response.status(status).end();
     this.logger.error(`${exception.message}: ${exception.stack}`);
   }
 }

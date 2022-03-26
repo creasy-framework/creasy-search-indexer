@@ -21,7 +21,7 @@ export class EntityRepository {
       this.configService.get<FieldIndexOption[]>('index.fields');
     const graphQLQuery = this.mapper.map(rootEntityType, id, indexFields);
     this.logger.log({
-      message: 'Querying entity',
+      msg: 'Querying entity',
       query: graphQLQuery,
     });
     const response = await fetch(`${entityStore}/graphql`, {
@@ -32,11 +32,10 @@ export class EntityRepository {
       body: graphQLQuery,
     });
     if (response.status === 200) {
-      const results = await response.json();
-      return results;
+      return await response.json();
     } else {
       this.logger.error({
-        message: 'Failed to fetching entity',
+        msg: 'Failed to fetching entity',
         status: response.status,
       });
       throw new EntityStoreHttpError();

@@ -80,13 +80,13 @@ export class EntityIndexer {
       .forEach((message: IndexMessage) => {
         const { id, correlationId } = message;
         this.logger.log({
-          message: 'Received entity index event',
+          msg: 'Received entity index event',
           correlationId,
           payload: message,
         });
         this.execute(id).catch((error) => {
           this.logger.error({
-            message: `Failed to index entity ${this.entityType}(${id})`,
+            msg: `Failed to index entity ${this.entityType}(${id})`,
             correlationId,
             error: error.message,
           });
@@ -99,12 +99,12 @@ export class EntityIndexer {
       })
       .catch((error) =>
         this.logger.error({
-          message: 'Unexpected error in index stream',
+          msg: 'Unexpected error in index stream',
           error,
         }),
       );
     await stream.start();
-    this.logger.log({ message: `${entityType} entity indexer started` });
+    this.logger.log({ msg: `${entityType} entity indexer started` });
   }
 
   async onModuleInit() {

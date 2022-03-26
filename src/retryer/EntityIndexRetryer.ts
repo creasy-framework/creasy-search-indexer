@@ -24,7 +24,7 @@ export class EntityIndexRetryer {
     );
     (this.streams as any).on('error', (error) =>
       this.logger.error({
-        message: 'Unexpected error in retry queue',
+        msg: 'Unexpected error in retry queue',
         error,
       }),
     );
@@ -72,7 +72,7 @@ export class EntityIndexRetryer {
   async onModuleInit() {
     await this.initRetryQueue();
     await this.initRetryStream();
-    this.logger.log({ message: 'Index retryer started' });
+    this.logger.log('Index retryer started');
   }
 
   private async initRetryQueue() {
@@ -135,7 +135,7 @@ export class EntityIndexRetryer {
       .mapJSONConvenience()
       .mapWrapKafkaValue()
       .tap((message) =>
-        this.logger.log({ message: 'Moving to DLQ..', event: message }),
+        this.logger.log({ msg: 'Moving to DLQ..', event: message }),
       )
       .to(INDEX_DLQ, 1, 'buffer');
 
@@ -147,7 +147,7 @@ export class EntityIndexRetryer {
       setTimeout(() => {
         const { tried = 1 } = originalMessage;
         this.logger.log({
-          message: `Retrying ${JSON.stringify(originalMessage)}`,
+          msg: `Retrying ${JSON.stringify(originalMessage)}`,
         });
         resolve({
           ...originalMessage,

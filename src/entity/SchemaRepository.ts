@@ -18,7 +18,7 @@ export class SchemaRepository {
       return results as EntitySchemaDto[];
     } else {
       this.logger.error({
-        message: 'Failed to fetching schemas',
+        msg: 'Failed to fetching schemas',
       });
       throw new EntityStoreHttpError();
     }
