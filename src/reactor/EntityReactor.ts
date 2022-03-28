@@ -12,7 +12,7 @@ import { EntityIndexRetryer } from '../retryer/EntityIndexRetryer';
 @Injectable()
 export class EntityReactor {
   private readonly logger = new Logger(EntityReactor.name);
-  private readonly entityType;
+  private readonly entities;
 
   constructor(
     private configService: ConfigService,
@@ -20,16 +20,17 @@ export class EntityReactor {
     private indexRepository: IndexRepository,
     private retryer: EntityIndexRetryer,
   ) {
-    this.entityType = this.configService.get<string>('entity.type');
+    this.entities =
+      this.configService.get<Record<string, any>>('index.entities');
   }
 
-  private getStreamConfig(): KafkaStreamsConfig {
+  private getStreamConfig(entityType: string): KafkaStreamsConfig {
     const brokers = this.configService.get<string>('event.brokers');
     return {
       noptions: {
         'metadata.broker.list': brokers,
-        'group.id': `${this.entityType.toUpperCase()}_REACTOR`,
-        'client.id': `${this.entityType.toUpperCase()}_REACTOR`,
+        'group.id': `${entityType.toUpperCase()}_REACTOR`,
+        'client.id': `${entityType.toUpperCase()}_REACTOR`,
         event_cb: true,
         'compression.codec': 'snappy',
         'api.version.request': true,
@@ -62,39 +63,57 @@ export class EntityReactor {
     };
   }
 
-  private async execute(entityType: string, id: any, correlationId: string) {
-    if (entityType === this.entityType) {
+  private async extract(
+    rootEntityType: string,
+    publishedEntityType: string,
+    id: any,
+    correlationId: string,
+  ) {
+    if (publishedEntityType === rootEntityType) {
       this.logger.log({
         msg: 'Received entity published event',
-        entityType,
+        rootEntityType,
         id,
         correlationId,
       });
-      return [{ correlationId, id }];
+      return [
+        { correlationId, id, rootEntityType, entityType: publishedEntityType },
+      ];
     } else {
-      const dependencies = await this.schemaService.getDependencies();
-      if (dependencies[entityType] && dependencies[entityType].length > 0) {
+      const dependencies = await this.schemaService.getDependencies(
+        rootEntityType,
+      );
+      if (
+        dependencies[publishedEntityType] &&
+        dependencies[publishedEntityType].length > 0
+      ) {
         this.logger.log({
           msg: 'Received dependent entity published event',
-          entityType,
+          rootEntityType,
+          publishedEntityType,
           id,
           correlationId,
-          paths: dependencies[entityType],
+          paths: dependencies[publishedEntityType],
         });
         const ids = await this.indexRepository.getIdsByDependency(
-          this.entityType,
-          entityType,
+          rootEntityType,
+          publishedEntityType,
           id,
-          dependencies[entityType],
+          dependencies[publishedEntityType],
         );
-        return ids.map((id) => ({ correlationId, id }));
+        return ids.map((id) => ({
+          correlationId,
+          id,
+          rootEntityType,
+          entityType: publishedEntityType,
+        }));
       }
     }
     return Promise.resolve([]);
   }
 
-  private async createStream(entityType: string) {
-    const kafkaStreams = new KafkaStreams(this.getStreamConfig());
+  private async createStream(rootEntityType: string) {
+    const kafkaStreams = new KafkaStreams(this.getStreamConfig(rootEntityType));
     const entityStream = kafkaStreams.getKStream();
     (kafkaStreams as any).on('error', (error) =>
       this.logger.error({
@@ -110,11 +129,17 @@ export class EntityReactor {
         const { correlationId, data } = message;
         const { entityType, id } = data;
         try {
-          return await this.execute(entityType, id, correlationId);
+          return await this.extract(
+            rootEntityType,
+            entityType,
+            id,
+            correlationId,
+          );
         } catch (error) {
           this.logger.error({
-            msg: `Failed to extract indexing request ${this.entityType}(${id})`,
+            msg: `Failed to extract indexing request ${entityType}(${id})`,
             error: error.message,
+            stack: error.stack,
             correlationId,
           });
           this.retryer.retry(ENTITY_PUBLISHED_EVENT, message, error);
@@ -130,18 +155,17 @@ export class EntityReactor {
         }
         return entityStream.getNewMostFrom(messages);
       })
-      .to(
-        `${this.entityType}${ENTITY_INDEXING_EVENT_SUFFIX}`,
-        'auto',
-        'buffer',
-      );
+      .to(`${rootEntityType}${ENTITY_INDEXING_EVENT_SUFFIX}`, 'auto', 'buffer');
 
     await entityStream.start();
 
-    this.logger.log({ msg: `${entityType} entity reactor started` });
+    this.logger.log({ msg: `${rootEntityType} entity reactor started` });
   }
 
   async onModuleInit() {
-    await this.createStream(this.entityType);
+    const promises = Object.keys(this.entities).map((entityType) =>
+      this.createStream(entityType),
+    );
+    await Promise.all(promises);
   }
 }

@@ -5,7 +5,7 @@ import { EntityRepository } from './EntityRepository';
 export class EntityService {
   constructor(private repository: EntityRepository) {}
 
-  async getEntityById(id: any) {
-    return await this.repository.getEntityById(id);
+  async getEntityById(entityType: string, id: any) {
+    return await this.repository.getEntityById(entityType, id);
   }
 }

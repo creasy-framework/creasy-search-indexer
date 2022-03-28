@@ -3,7 +3,6 @@ event:
   provider: kafka
   brokers: "127.0.0.1:9092"
 entity:
-  type: "User"
   store-address: "http://127.0.0.1:3000"
 index:
   provider: elasticsearch
@@ -12,13 +11,21 @@ index:
   retryPolicy:
     maxRetries: 5
     retryInterval: 5000
-  fields:
-    -  name: "id"
-    -  name: "displayName"
-    -  name: "organization.id"
-    -  name: "organization.displayName"
-    -  name: "organization.group.id"
-    -  name: "organization.group.displayName"
+  entities:
+    User:
+      fields:
+        - name: "id"
+        - name: "displayName"
+        - name: "organization.id"
+        - name: "organization.displayName"
+        - name: "organization.group.id"
+        - name: "organization.group.displayName"
+    Organization:
+      fields:
+        - name: "id"
+        - name: "displayName"
+        - name: "group.id"
+        - name: "group.displayName"
 
 
 
