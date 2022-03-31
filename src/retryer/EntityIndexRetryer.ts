@@ -75,7 +75,7 @@ export class EntityIndexRetryer {
   async onModuleInit() {
     await this.initRetryQueue();
     await this.initRetryStream();
-    this.logger.log('Index retryer started');
+    this.logger.log('Index retryer started.');
   }
 
   private async initRetryQueue() {

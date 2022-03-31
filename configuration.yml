@@ -1,13 +1,13 @@
 ---
 event:
   provider: kafka
-  brokers: "127.0.0.1:9092"
+  brokers: "kafka:9092"
 entity:
-  store-address: "http://127.0.0.1:3000"
+  store-address: "http://entity-store:3000"
 index:
   provider: elasticsearch
   hosts:
-    - "http://localhost:9200"
+    - "http://es01:9200"
   retryPolicy:
     maxRetries: 5
     retryInterval: 5000
