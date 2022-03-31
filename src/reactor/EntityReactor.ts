@@ -77,7 +77,15 @@ export class EntityReactor {
         correlationId,
       });
       return [
-        { correlationId, id, rootEntityType, entityType: publishedEntityType },
+        {
+          key: id,
+          value: {
+            correlationId,
+            id,
+            rootEntityType,
+            entityType: publishedEntityType,
+          },
+        },
       ];
     } else {
       const dependencies = await this.schemaService.getDependencies(
@@ -101,10 +109,13 @@ export class EntityReactor {
           dependencies[publishedEntityType],
         );
         return ids.map((id) => ({
-          correlationId,
-          id,
-          rootEntityType,
-          entityType: publishedEntityType,
+          key: id,
+          value: {
+            correlationId,
+            id,
+            rootEntityType,
+            entityType: publishedEntityType,
+          },
         }));
       }
     }

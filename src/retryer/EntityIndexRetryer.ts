@@ -137,21 +137,21 @@ export class EntityIndexRetryer {
       .tap((message) =>
         this.logger.log({ msg: 'Moving to DLQ..', event: message }),
       )
-      .to(INDEX_DLQ, 1, 'buffer');
+      .to(INDEX_DLQ, 'auto', 'buffer');
 
     await reactStream
       .mapJSONConvenience()
       .mapWrapKafkaValue()
       .skipRepeatsWith(this.shouldSkip)
       .asyncMap(({ originalMessage }) => this.waitAndTry(originalMessage))
-      .to(ENTITY_PUBLISHED_EVENT, 1, 'buffer');
+      .to(ENTITY_PUBLISHED_EVENT, 'auto', 'buffer');
 
     const promises = Object.keys(this.entities).map((entityType, i) => {
       return indexStreams[i]
         .mapJSONConvenience()
         .mapWrapKafkaValue()
         .asyncMap(({ originalMessage }) => this.waitAndTry(originalMessage))
-        .to(`${entityType}${ENTITY_INDEXING_EVENT_SUFFIX}`, 1, 'buffer');
+        .to(`${entityType}${ENTITY_INDEXING_EVENT_SUFFIX}`, 'auto', 'buffer');
     });
 
     await Promise.all(promises);
@@ -174,8 +174,9 @@ export class EntityIndexRetryer {
   }
 
   retry(targetQueue, originalMessage, error) {
-    this.retryQueue
-      .wrapAsKafkaValue(INDEX_RETRY_QUEUE)
-      .writeToStream({ targetQueue, originalMessage, error: error.message });
+    this.retryQueue.wrapAsKafkaValue(INDEX_RETRY_QUEUE).writeToStream({
+      key: targetQueue,
+      value: { targetQueue, originalMessage, error: error.message },
+    });
   }
 }

@@ -1,14 +1,26 @@
 version: '3.7'
 services:
-  indexer:
-    container_name: creasy-indexer
+  indexer-1:
+    container_name: creasy-indexer-1
     image: node:16
     working_dir: /app
     volumes:
       - .:/app
     command: bash -c "yarn install && yarn start:dev"
-    ports:
-      - "3001:3001"
+  indexer-2:
+    container_name: creasy-indexer-2
+    image: node:16
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: bash -c "yarn install && yarn start:dev"
+  indexer-3:
+    container_name: creasy-indexer-3
+    image: node:16
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: bash -c "yarn install && yarn start:dev"
 networks:
   default:
     external:
