@@ -17,9 +17,7 @@ services:
     volumes:
       - data01:/usr/share/elasticsearch/data
     ports:
-      - 9200:9200
-    networks:
-      - elastic
+      - "9200:9200"
   es02:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
     container_name: es02
@@ -36,9 +34,6 @@ services:
         hard: -1
     volumes:
       - data02:/usr/share/elasticsearch/data
-    networks:
-      - elastic
-
 volumes:
   data01:
     driver: local
@@ -46,5 +41,6 @@ volumes:
     driver: local
 
 networks:
-  elastic:
-    driver: bridge
+  default:
+    external:
+      name: creasy-network

@@ -11,7 +11,7 @@ import { EntityIndexRetryer } from '../retryer/EntityIndexRetryer';
 @Injectable()
 export class EntityIndexer {
   private readonly logger = new Logger(EntityIndexer.name);
-  private readonly entityType;
+  private readonly entities;
 
   constructor(
     private configService: ConfigService,
@@ -19,16 +19,17 @@ export class EntityIndexer {
     private indexRepository: IndexRepository,
     private retryer: EntityIndexRetryer,
   ) {
-    this.entityType = this.configService.get<string>('entity.type');
+    this.entities =
+      this.configService.get<Record<string, any>>('index.entities');
   }
 
-  private getStreamConfig(): KafkaStreamsConfig {
+  private getStreamConfig(rootEntityType: string): KafkaStreamsConfig {
     const brokers = this.configService.get<string>('event.brokers');
     return {
       noptions: {
         'metadata.broker.list': brokers,
-        'group.id': `${this.entityType.toUpperCase()}_INDEXER`,
-        'client.id': `${this.entityType.toUpperCase()}_INDEXER`,
+        'group.id': `${rootEntityType.toUpperCase()}_INDEXER`,
+        'client.id': `${rootEntityType.toUpperCase()}_INDEXER`,
         event_cb: true,
         'compression.codec': 'snappy',
         'api.version.request': true,
@@ -61,20 +62,20 @@ export class EntityIndexer {
     };
   }
 
-  private async execute(id: any) {
-    const { data } = await this.entityService.getEntityById(id);
+  private async execute(rootEntityType: string, id: any) {
+    const { data } = await this.entityService.getEntityById(rootEntityType, id);
     await this.indexRepository.index(
-      this.entityType,
+      rootEntityType,
       id,
-      data[camelCase(this.entityType)],
+      data[camelCase(rootEntityType)],
     );
   }
 
-  private async createStream(entityType: string) {
-    const kafkaStreams = new KafkaStreams(this.getStreamConfig());
+  private async createStream(rootEntityType: string) {
+    const kafkaStreams = new KafkaStreams(this.getStreamConfig(rootEntityType));
     const stream = kafkaStreams.getKStream();
     stream
-      .from(`${this.entityType}${ENTITY_INDEXING_EVENT_SUFFIX}`)
+      .from(`${rootEntityType}${ENTITY_INDEXING_EVENT_SUFFIX}`)
       .mapJSONConvenience()
       .mapWrapKafkaValue()
       .forEach((message: IndexMessage) => {
@@ -84,14 +85,14 @@ export class EntityIndexer {
           correlationId,
           payload: message,
         });
-        this.execute(id).catch((error) => {
+        this.execute(rootEntityType, id).catch((error) => {
           this.logger.error({
-            msg: `Failed to index entity ${this.entityType}(${id})`,
+            msg: `Failed to index entity ${rootEntityType}(${id})`,
             correlationId,
             error: error.message,
           });
           this.retryer.retry(
-            `${this.entityType}${ENTITY_INDEXING_EVENT_SUFFIX}`,
+            `${rootEntityType}${ENTITY_INDEXING_EVENT_SUFFIX}`,
             message,
             error,
           );
@@ -104,10 +105,13 @@ export class EntityIndexer {
         }),
       );
     await stream.start();
-    this.logger.log({ msg: `${entityType} entity indexer started` });
+    this.logger.log({ msg: `${rootEntityType} entity indexer started` });
   }
 
   async onModuleInit() {
-    await this.createStream(this.entityType);
+    const promises = Object.keys(this.entities).map((entityType) =>
+      this.createStream(entityType),
+    );
+    await Promise.all(promises);
   }
 }

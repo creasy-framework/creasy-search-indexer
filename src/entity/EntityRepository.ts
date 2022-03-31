@@ -1,24 +1,24 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import fetch from 'node-fetch';
-import { FieldIndexOption } from '../configuration';
 import { IndexFieldToGraphQLMapper } from './IndexFieldToGraphQLMapper';
 import { EntityStoreHttpError } from './exceptions/EntityStoreHttpError';
 
 @Injectable()
 export class EntityRepository {
   private readonly logger = new Logger(EntityRepository.name);
-
+  private readonly entities;
   constructor(
     private configService: ConfigService,
     private mapper: IndexFieldToGraphQLMapper,
-  ) {}
+  ) {
+    this.entities =
+      this.configService.get<Record<string, any>>('index.entities');
+  }
 
-  async getEntityById(id: any) {
-    const rootEntityType = this.configService.get<string>('entity.type');
+  async getEntityById(rootEntityType: string, id: any) {
     const entityStore = this.configService.get<string>('entity.store-address');
-    const indexFields =
-      this.configService.get<FieldIndexOption[]>('index.fields');
+    const indexFields = this.entities[rootEntityType]?.fields;
     const graphQLQuery = this.mapper.map(rootEntityType, id, indexFields);
     this.logger.log({
       msg: 'Querying entity',

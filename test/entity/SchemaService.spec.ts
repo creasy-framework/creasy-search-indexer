@@ -6,7 +6,6 @@ import unrelevantSchema from '../__fixtures/entity-schemas/unrelevant-schema.jso
 import { EntitySchemaDto } from '../../src/entity/Types';
 
 describe('SchemaService', () => {
-  let configService: any;
   let schemaService: SchemaService;
   const schemas: EntitySchemaDto[] = [
     userSchema as EntitySchemaDto,
@@ -16,14 +15,13 @@ describe('SchemaService', () => {
   ];
   let schemaRepository: any;
   beforeEach(() => {
-    configService = { get: () => 'User' };
     schemaRepository = {
       getEntitySchemas: jest.fn().mockResolvedValue(schemas),
     };
-    schemaService = new SchemaService(configService, schemaRepository);
+    schemaService = new SchemaService(schemaRepository);
   });
   it('getDependencies should return all dependencies field path', async () => {
-    const actual = await schemaService.getDependencies();
+    const actual = await schemaService.getDependencies('User');
     expect(actual).toEqual({
       Organization: ['organization'],
       Group: ['organization.group'],
@@ -32,7 +30,7 @@ describe('SchemaService', () => {
   });
 
   it('getSchemas should return all relevant schemas', async () => {
-    const actual = await schemaService.getSchemas();
+    const actual = await schemaService.getSchemas('User');
     expect(actual).toEqual([
       userSchema as EntitySchemaDto,
       organizationSchema as EntitySchemaDto,
@@ -42,17 +40,17 @@ describe('SchemaService', () => {
 
   describe('isRelevant', () => {
     it('should return true if entity type is a dependency', async () => {
-      const actual = await schemaService.isRelevant('Group');
+      const actual = await schemaService.isRelevant('User', 'Group');
       expect(actual).toEqual(true);
     });
 
     it('should return false if entity type is not a dependency', async () => {
-      const actual = await schemaService.isRelevant('Misc');
+      const actual = await schemaService.isRelevant('User', 'Misc');
       expect(actual).toEqual(false);
     });
 
     it('should return true if entity type is root entity', async () => {
-      const actual = await schemaService.isRelevant('User');
+      const actual = await schemaService.isRelevant('User', 'User');
       expect(actual).toEqual(true);
     });
   });

@@ -12,6 +12,7 @@ export class EntityIndexRetryer {
   private streams: KafkaStreams;
   private readonly maxRetries: number;
   private readonly retryInterval: number;
+  private readonly entities;
   constructor(private configService: ConfigService) {
     this.streams = new KafkaStreams(this.getStreamConfig());
     this.maxRetries = this.configService.get<number>(
@@ -22,6 +23,8 @@ export class EntityIndexRetryer {
       'index.retryPolicy.retryInterval',
       1000,
     );
+    this.entities =
+      this.configService.get<Record<string, any>>('index.entities');
     (this.streams as any).on('error', (error) =>
       this.logger.error({
         msg: 'Unexpected error in retry queue',
@@ -72,7 +75,7 @@ export class EntityIndexRetryer {
   async onModuleInit() {
     await this.initRetryQueue();
     await this.initRetryStream();
-    this.logger.log('Index retryer started');
+    this.logger.log('Index retryer started.');
   }
 
   private async initRetryQueue() {
@@ -105,40 +108,53 @@ export class EntityIndexRetryer {
     return false;
   }
 
+  private shouldSkip(messageA, messageB) {
+    return (
+      JSON.stringify(messageA?.originalMessage) ===
+      JSON.stringify(messageB?.originalMessage)
+    );
+  }
+
   private async initRetryStream() {
-    const entityType = this.configService.get<string>('entity.type');
     const retryStream = this.streams.getKStream(INDEX_RETRY_QUEUE);
-    const [reactStream, indexStream, dlqStream] = retryStream.branch([
-      (message) => this.shouldForwardToStream(ENTITY_PUBLISHED_EVENT, message),
-      (message) =>
-        this.shouldForwardToStream(
-          `${entityType}${ENTITY_INDEXING_EVENT_SUFFIX}`,
-          message,
-        ),
+    const [dlqStream, reactStream, ...indexStreams] = retryStream.branch([
       (message) =>
         this.shouldForwardToDLQ(this.getJsonValueFromMessage(message)),
+      (message) => this.shouldForwardToStream(ENTITY_PUBLISHED_EVENT, message),
+      ...Object.keys(this.entities).map(
+        (entityType) => (message) =>
+          this.shouldForwardToStream(
+            `${entityType}${ENTITY_INDEXING_EVENT_SUFFIX}`,
+            message,
+          ),
+      ),
     ]);
-
-    await reactStream
-      .mapJSONConvenience()
-      .mapWrapKafkaValue()
-      .asyncMap(({ originalMessage }) => this.waitAndTry(originalMessage))
-      .to(ENTITY_PUBLISHED_EVENT, 1, 'buffer');
-
-    await indexStream
-      .mapJSONConvenience()
-      .mapWrapKafkaValue()
-      .asyncMap(({ originalMessage }) => this.waitAndTry(originalMessage))
-      .to(`${entityType}${ENTITY_INDEXING_EVENT_SUFFIX}`, 1, 'buffer');
 
     await dlqStream
       .mapJSONConvenience()
       .mapWrapKafkaValue()
+      .skipRepeatsWith(this.shouldSkip)
       .tap((message) =>
         this.logger.log({ msg: 'Moving to DLQ..', event: message }),
       )
-      .to(INDEX_DLQ, 1, 'buffer');
+      .to(INDEX_DLQ, 'auto', 'buffer');
 
+    await reactStream
+      .mapJSONConvenience()
+      .mapWrapKafkaValue()
+      .skipRepeatsWith(this.shouldSkip)
+      .asyncMap(({ originalMessage }) => this.waitAndTry(originalMessage))
+      .to(ENTITY_PUBLISHED_EVENT, 'auto', 'buffer');
+
+    const promises = Object.keys(this.entities).map((entityType, i) => {
+      return indexStreams[i]
+        .mapJSONConvenience()
+        .mapWrapKafkaValue()
+        .asyncMap(({ originalMessage }) => this.waitAndTry(originalMessage))
+        .to(`${entityType}${ENTITY_INDEXING_EVENT_SUFFIX}`, 'auto', 'buffer');
+    });
+
+    await Promise.all(promises);
     await retryStream.start();
   }
 
@@ -158,8 +174,9 @@ export class EntityIndexRetryer {
   }
 
   retry(targetQueue, originalMessage, error) {
-    this.retryQueue
-      .wrapAsKafkaValue(INDEX_RETRY_QUEUE)
-      .writeToStream({ targetQueue, originalMessage, error: error.message });
+    this.retryQueue.wrapAsKafkaValue(INDEX_RETRY_QUEUE).writeToStream({
+      key: targetQueue,
+      value: { targetQueue, originalMessage, error: error.message },
+    });
   }
 }

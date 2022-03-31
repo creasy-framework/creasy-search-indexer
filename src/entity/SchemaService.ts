@@ -1,28 +1,30 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable } from '@nestjs/common';
 import { EntityFieldProperty, EntitySchemaDto } from './Types';
 import { SchemaRepository } from './SchemaRepository';
 
 @Injectable()
 export class SchemaService {
-  constructor(
-    private configService: ConfigService,
-    private repository: SchemaRepository,
-  ) {}
+  private cachedSchemas: EntitySchemaDto[];
 
-  async isRelevant(entityType: string) {
-    return Object.keys(await this.getDependencies()).includes(entityType);
+  constructor(private repository: SchemaRepository) {}
+
+  async isRelevant(rootEntityType: string, entityType: string) {
+    return Object.keys(await this.getDependencies(rootEntityType)).includes(
+      entityType,
+    );
   }
 
-  async getDependencies() {
+  async getDependencies(rootEntityType: string) {
     const schemas = await this.getAllSchemas();
-    return this.getDependenciesForRootEntity(schemas);
+    return this.getDependenciesForRootEntity(rootEntityType, schemas);
   }
 
-  async getSchemas() {
+  async getSchemas(rootEntityType: string) {
     const schemas = await this.getAllSchemas();
-    const rootEntityType = this.configService.get<string>('entity.type');
-    const dependencies = this.getDependenciesForRootEntity(schemas);
+    const dependencies = this.getDependenciesForRootEntity(
+      rootEntityType,
+      schemas,
+    );
     return schemas.filter(
       (schema) =>
         schema.entityType === rootEntityType ||
@@ -30,8 +32,10 @@ export class SchemaService {
     );
   }
 
-  private getDependenciesForRootEntity(schemas: EntitySchemaDto[]) {
-    const rootEntityType = this.configService.get<string>('entity.type');
+  private getDependenciesForRootEntity(
+    rootEntityType: string,
+    schemas: EntitySchemaDto[],
+  ) {
     const rootEntitySchema = schemas.find(
       ({ entityType }) => entityType === rootEntityType,
     );
@@ -39,8 +43,11 @@ export class SchemaService {
   }
 
   private async getAllSchemas() {
-    // TO DO: cache here
-    return await this.repository.getEntitySchemas();
+    // TO DO: refresh cache
+    if (!this.cachedSchemas) {
+      this.cachedSchemas = await this.repository.getEntitySchemas();
+    }
+    return this.cachedSchemas;
   }
 
   private getRefTypeFromProperty(property: EntityFieldProperty) {
