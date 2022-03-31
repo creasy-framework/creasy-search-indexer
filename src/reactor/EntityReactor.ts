@@ -97,7 +97,6 @@ export class EntityReactor {
         });
         const ids = await this.indexRepository.getIdsByDependency(
           rootEntityType,
-          publishedEntityType,
           id,
           dependencies[publishedEntityType],
         );
