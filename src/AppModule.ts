@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ReactorModule } from './reactor';
 import { IndexerModule } from './indexer';
 import { ConfigModule } from '@nestjs/config';
-import { ConfigurationFactory } from './configuration';
+import { appConfigurationFactory } from './configuration';
 import { RetryerModule } from './retryer';
 import { LoggerModule } from 'nestjs-pino';
 
@@ -14,7 +14,7 @@ import { LoggerModule } from 'nestjs-pino';
         autoLogging: false,
       },
     }),
-    ConfigModule.forRoot({ load: [ConfigurationFactory], isGlobal: true }),
+    ConfigModule.forRoot({ load: [appConfigurationFactory], isGlobal: true }),
     RetryerModule,
     ReactorModule,
     IndexerModule,

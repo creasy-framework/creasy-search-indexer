@@ -1,4 +1,7 @@
 export interface EntityPublishedMessage {
-  entityType: string;
-  id: any;
+  correlationId: string;
+  data: {
+    id: any;
+    entityType: string;
+  };
 }

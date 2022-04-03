@@ -1,11 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client } from '@elastic/elasticsearch';
 
 @Injectable()
 export class IndexRepository {
   private esClient;
-  private readonly RESOLVE_IDS_BATCH_SIZE = 200;
+  private readonly DEFAULT_RESOLVE_IDS_BATCH_SIZE = 200;
 
   constructor(private configService: ConfigService) {}
 
@@ -67,30 +67,33 @@ export class IndexRepository {
       indexName,
       dependentEntityId,
       dependentPaths,
-      this.RESOLVE_IDS_BATCH_SIZE,
+      this.DEFAULT_RESOLVE_IDS_BATCH_SIZE,
       0,
     );
 
-    const remains = total - this.RESOLVE_IDS_BATCH_SIZE;
+    const remains = total - this.DEFAULT_RESOLVE_IDS_BATCH_SIZE;
 
     const chunks =
-      Math.floor(remains / this.RESOLVE_IDS_BATCH_SIZE) +
-      Math.min(1, remains % this.RESOLVE_IDS_BATCH_SIZE);
+      Math.floor(remains / this.DEFAULT_RESOLVE_IDS_BATCH_SIZE) +
+      Math.min(1, remains % this.DEFAULT_RESOLVE_IDS_BATCH_SIZE);
 
-    const results = Array(chunks)
-      .fill(0)
-      .reduce(async (promise, _, offset) => {
-        const allIds = await promise;
-        const { ids: idsForChunk = [] } = await this.searchByDependent(
-          indexName,
-          dependentEntityId,
-          dependentPaths,
-          this.RESOLVE_IDS_BATCH_SIZE,
-          (offset + 1) * this.RESOLVE_IDS_BATCH_SIZE,
-        );
-        return [...allIds, ...idsForChunk];
-      }, Promise.resolve(ids));
+    if (chunks > 0) {
+      const results = Array(chunks)
+        .fill(0)
+        .reduce(async (promise, _, offset) => {
+          const allIds = await promise;
+          const { ids: idsForChunk = [] } = await this.searchByDependent(
+            indexName,
+            dependentEntityId,
+            dependentPaths,
+            this.DEFAULT_RESOLVE_IDS_BATCH_SIZE,
+            (offset + 1) * this.DEFAULT_RESOLVE_IDS_BATCH_SIZE,
+          );
+          return [...allIds, ...idsForChunk];
+        }, Promise.resolve(ids));
 
-    return results;
+      return results;
+    }
+    return ids;
   }
 }

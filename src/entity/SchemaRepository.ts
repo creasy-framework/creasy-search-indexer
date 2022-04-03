@@ -7,12 +7,18 @@ import { EntitySchemaDto } from './Types';
 @Injectable()
 export class SchemaRepository {
   private readonly logger = new Logger(SchemaRepository.name);
+  private readonly entityStoreUrl;
 
-  constructor(private configService: ConfigService) {}
+  constructor(private configService: ConfigService) {
+    this.entityStoreUrl = this.configService.get<string>(
+      'entity.store-address',
+    );
+  }
 
   async getEntitySchemas(): Promise<EntitySchemaDto[]> {
-    const entityStore = this.configService.get<string>('entity.store-address');
-    const response = await fetch(`${entityStore}/entity-schema-registry`);
+    const response = await fetch(
+      `${this.entityStoreUrl}/entity-schema-registry`,
+    );
     if (response.status === 200) {
       const results = await response.json();
       return results as EntitySchemaDto[];

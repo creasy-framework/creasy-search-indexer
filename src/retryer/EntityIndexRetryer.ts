@@ -1,20 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { KafkaStreams, KafkaStreamsConfig, KStream } from 'kafka-streams';
+import { KafkaStreams, KafkaStreamsConfig } from 'kafka-streams';
 import { ConfigService } from '@nestjs/config';
 import { INDEX_DLQ, INDEX_RETRY_QUEUE } from './Constants';
 import { ENTITY_PUBLISHED_EVENT } from '../reactor/Constants';
 import { ENTITY_INDEXING_EVENT_SUFFIX } from '../indexer/Constants';
+import { streamConfigurationFactory } from '../configuration';
 
 @Injectable()
 export class EntityIndexRetryer {
-  private retryQueue: KStream;
   private readonly logger = new Logger(EntityIndexRetryer.name);
   private streams: KafkaStreams;
   private readonly maxRetries: number;
   private readonly retryInterval: number;
   private readonly entities;
   constructor(private configService: ConfigService) {
-    this.streams = new KafkaStreams(this.getStreamConfig());
+    const brokers = this.configService.get<string>('event.brokers');
+    this.streams = new KafkaStreams(
+      streamConfigurationFactory(brokers, 'INDEX_RETRYER'),
+    );
     this.maxRetries = this.configService.get<number>(
       'index.retryPolicy.maxRetries',
       5,
@@ -33,55 +36,9 @@ export class EntityIndexRetryer {
     );
   }
 
-  private getStreamConfig(): KafkaStreamsConfig {
-    const brokers = this.configService.get<string>('event.brokers');
-    return {
-      noptions: {
-        'metadata.broker.list': brokers,
-        'group.id': 'INDEX_RETRYER',
-        'client.id': 'INDEX_RETRYER',
-        event_cb: true,
-        'compression.codec': 'snappy',
-        'api.version.request': true,
-        'socket.keepalive.enable': true,
-        'socket.blocking.max.ms': 100,
-        'enable.auto.commit': false,
-        'auto.commit.interval.ms': 100,
-        'heartbeat.interval.ms': 250,
-        'retry.backoff.ms': 250,
-        'fetch.min.bytes': 100,
-        'fetch.message.max.bytes': 2 * 1024 * 1024,
-        'queued.min.messages': 100,
-        'fetch.error.backoff.ms': 100,
-        'queued.max.messages.kbytes': 50,
-        'fetch.wait.max.ms': 1000,
-        'queue.buffering.max.ms': 1000,
-        'batch.num.messages': 10000,
-      },
-      tconf: {
-        'auto.offset.reset': 'earliest',
-        'request.required.acks': 1,
-      },
-      batchOptions: {
-        batchSize: 1,
-        commitEveryNBatch: 1,
-        concurrency: 1,
-        commitSync: false,
-        noBatchCommits: false,
-      },
-    };
-  }
-
   async onModuleInit() {
-    await this.initRetryQueue();
     await this.initRetryStream();
     this.logger.log('Index retryer started.');
-  }
-
-  private async initRetryQueue() {
-    this.retryQueue = this.streams.getKStream(null);
-    await this.retryQueue.to(INDEX_RETRY_QUEUE, 'auto', 'buffer');
-    await this.retryQueue.start();
   }
 
   private getJsonValueFromMessage(message) {
@@ -171,12 +128,5 @@ export class EntityIndexRetryer {
         });
       }, this.retryInterval),
     );
-  }
-
-  retry(targetQueue, originalMessage, error) {
-    this.retryQueue.wrapAsKafkaValue(INDEX_RETRY_QUEUE).writeToStream({
-      key: targetQueue,
-      value: { targetQueue, originalMessage, error: error.message },
-    });
   }
 }

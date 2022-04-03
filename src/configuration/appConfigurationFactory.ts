@@ -4,7 +4,7 @@ import * as yaml from 'js-yaml';
 import { join } from 'path';
 import { readFileSync } from 'fs';
 
-const ConfigurationFactory: ConfigFactory<IndexerConfiguration> = () => {
+const appConfigurationFactory: ConfigFactory<IndexerConfiguration> = () => {
   const config: IndexerConfiguration = yaml.load(
     readFileSync(join(process.env.CONFIG_PATH), 'utf8'),
   ) as IndexerConfiguration;
@@ -12,4 +12,4 @@ const ConfigurationFactory: ConfigFactory<IndexerConfiguration> = () => {
   return config;
 };
 
-export default ConfigurationFactory;
+export default appConfigurationFactory;

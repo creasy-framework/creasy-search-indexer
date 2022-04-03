@@ -8,23 +8,26 @@ import { EntityStoreHttpError } from './exceptions/EntityStoreHttpError';
 export class EntityRepository {
   private readonly logger = new Logger(EntityRepository.name);
   private readonly entities;
+  private readonly entityStoreUrl;
   constructor(
     private configService: ConfigService,
     private mapper: IndexFieldToGraphQLMapper,
   ) {
     this.entities =
       this.configService.get<Record<string, any>>('index.entities');
+    this.entityStoreUrl = this.configService.get<string>(
+      'entity.store-address',
+    );
   }
 
   async getEntityById(rootEntityType: string, id: any) {
-    const entityStore = this.configService.get<string>('entity.store-address');
     const indexFields = this.entities[rootEntityType]?.fields;
     const graphQLQuery = this.mapper.map(rootEntityType, id, indexFields);
     this.logger.log({
       msg: 'Querying entity',
       query: graphQLQuery,
     });
-    const response = await fetch(`${entityStore}/graphql`, {
+    const response = await fetch(`${this.entityStoreUrl}/graphql`, {
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain',
