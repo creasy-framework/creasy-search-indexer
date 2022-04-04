@@ -29,11 +29,11 @@ export class IndexFieldToGraphQLMapper {
     return json;
   }
 
-  map(entityType: string, id: any, fields: FieldIndexOption[]) {
+  map(entityType: string, ids: any[], fields: FieldIndexOption[]) {
     const query = {
-      [camelCase(entityType)]: {
+      [`${camelCase(entityType)}List`]: {
         __args: {
-          id,
+          ids,
         },
         ...this.parse(fields),
       },

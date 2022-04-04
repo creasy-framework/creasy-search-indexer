@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import fetch from 'node-fetch';
 import { IndexFieldToGraphQLMapper } from './IndexFieldToGraphQLMapper';
 import { EntityStoreHttpError } from './exceptions/EntityStoreHttpError';
+import camelCase from 'camelcase';
 
 @Injectable()
 export class EntityRepository {
@@ -20,9 +21,9 @@ export class EntityRepository {
     );
   }
 
-  async getEntityById(rootEntityType: string, id: any) {
+  async getEntityByIds(rootEntityType: string, ids: any[]) {
     const indexFields = this.entities[rootEntityType]?.fields;
-    const graphQLQuery = this.mapper.map(rootEntityType, id, indexFields);
+    const graphQLQuery = this.mapper.map(rootEntityType, ids, indexFields);
     this.logger.log({
       msg: 'Querying entity',
       query: graphQLQuery,
@@ -35,7 +36,8 @@ export class EntityRepository {
       body: graphQLQuery,
     });
     if (response.status === 200) {
-      return await response.json();
+      const { data } = await response.json();
+      return data[camelCase(`${rootEntityType}List`)] || [];
     } else {
       this.logger.error({
         msg: 'Failed to fetching entity',

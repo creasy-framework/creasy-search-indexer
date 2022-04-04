@@ -7,10 +7,15 @@ describe('EntityRepository', () => {
   let entityRepository;
   const mockGraphql = '{user (id: "123") {displayName}';
   const mockEntityStoreUrl = 'https://foo';
+  const mockData = {
+    data: {
+      userList: [{ id: 1 }, { id: 2 }],
+    },
+  };
   const mockResponse = {
     ok: true,
     status: 200,
-    json: () => ({}),
+    json: () => mockData,
   };
   const mockEntities = {
     User: {
@@ -30,7 +35,7 @@ describe('EntityRepository', () => {
       ),
   };
   let graphqlMapper;
-  describe('getEntityById', () => {
+  describe('getEntityByIds', () => {
     beforeEach(() => {
       graphqlMapper = {
         map: jest.fn().mockReturnValue(mockGraphql),
@@ -39,15 +44,15 @@ describe('EntityRepository', () => {
       entityRepository = new EntityRepository(configService, graphqlMapper);
     });
     it('should map method call map method with correct params', async () => {
-      await entityRepository.getEntityById('User', '1');
+      await entityRepository.getEntityByIds('User', ['1', '2']);
       expect(graphqlMapper.map).toBeCalledWith(
         'User',
-        '1',
+        ['1', '2'],
         mockEntities.User.fields,
       );
     });
     it('should call entity store endpoint correctly', async () => {
-      await entityRepository.getEntityById('User', '1');
+      await entityRepository.getEntityByIds('User', ['1', '2']);
       expect(fetch).toBeCalledWith(`${mockEntityStoreUrl}/graphql`, {
         method: 'POST',
         headers: {
@@ -64,7 +69,7 @@ describe('EntityRepository', () => {
         }),
       );
       await expect(
-        entityRepository.getEntityById('User', '1'),
+        entityRepository.getEntityByIds('User', ['1', '2']),
       ).rejects.toMatchObject(new EntityStoreHttpError());
     });
   });

@@ -13,7 +13,7 @@ describe('MessageExtractor', () => {
       .fn()
       .mockImplementation((indexName, dependentId, dependentPaths) => {
         if (dependentId === 'dirtyId') throw Error('fake error');
-        return ['1', '2'];
+        return ['1', '2', '3'];
       }),
   };
   const retryQueue: any = {
@@ -30,19 +30,23 @@ describe('MessageExtractor', () => {
   });
 
   it('should return single message for root entity ', async () => {
-    const actual = await extractor.extract('User', {
-      correlationId: 'fake',
-      data: {
-        id: '1',
-        entityType: 'User',
+    const actual = await extractor.extract(
+      'User',
+      {
+        correlationId: 'fake',
+        data: {
+          id: '1',
+          entityType: 'User',
+        },
       },
-    });
+      2,
+    );
     expect(actual).toEqual([
       {
         key: '1',
         value: {
           correlationId: 'fake',
-          id: '1',
+          ids: ['1'],
           rootEntityType: 'User',
           entityType: 'User',
         },
@@ -51,31 +55,35 @@ describe('MessageExtractor', () => {
   });
 
   it('should extract messages for dependent entity ', async () => {
-    const actual = await extractor.extract('User', {
-      correlationId: 'fake',
-      data: {
-        id: '1',
-        entityType: 'Organization',
+    const actual = await extractor.extract(
+      'User',
+      {
+        correlationId: 'fake',
+        data: {
+          id: '1',
+          entityType: 'Organization',
+        },
       },
-    });
+      2,
+    );
     expect(indexRepository.getIdsByDependency).toBeCalledWith('User', '1', [
       'organization',
     ]);
     expect(actual).toEqual([
       {
-        key: '1',
+        key: '1,2',
         value: {
           correlationId: 'fake',
-          id: '1',
+          ids: ['1', '2'],
           rootEntityType: 'User',
           entityType: 'Organization',
         },
       },
       {
-        key: '2',
+        key: '3',
         value: {
           correlationId: 'fake',
-          id: '2',
+          ids: ['3'],
           rootEntityType: 'User',
           entityType: 'Organization',
         },

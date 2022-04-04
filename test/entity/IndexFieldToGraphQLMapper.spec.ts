@@ -2,7 +2,7 @@ import { IndexFieldToGraphQLMapper } from '../../src/entity/IndexFieldToGraphQLM
 
 describe('IndexFieldToGraphQLMapper', () => {
   it('map method should return correct graphql', () => {
-    const expected = `{user (id: "123") {
+    const expected = `{userList (ids: ["1", "2"]) {
     id
     displayName
     organization {
@@ -14,14 +14,18 @@ describe('IndexFieldToGraphQLMapper', () => {
         }
     }
 }}`;
-    const actual = new IndexFieldToGraphQLMapper().map('User', '123', [
-      { name: 'id' },
-      { name: 'displayName' },
-      { name: 'organization.organizationId' },
-      { name: 'organization.displayName' },
-      { name: 'organization.group.groupId' },
-      { name: 'organization.group.displayName' },
-    ]);
+    const actual = new IndexFieldToGraphQLMapper().map(
+      'User',
+      ['1', '2'],
+      [
+        { name: 'id' },
+        { name: 'displayName' },
+        { name: 'organization.organizationId' },
+        { name: 'organization.displayName' },
+        { name: 'organization.group.groupId' },
+        { name: 'organization.group.displayName' },
+      ],
+    );
 
     expect(actual).toEqual(expected);
   });

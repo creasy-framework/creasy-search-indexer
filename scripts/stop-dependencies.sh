@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -e
 
-docker-compose down -v
+docker-compose -f docker-compose-dependencies.yml down -v

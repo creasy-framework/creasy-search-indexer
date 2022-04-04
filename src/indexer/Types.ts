@@ -1,4 +1,4 @@
 export interface IndexMessage {
-  id: any;
+  ids: any[];
   correlationId: string;
 }

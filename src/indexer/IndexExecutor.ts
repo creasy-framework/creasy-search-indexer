@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import camelCase from 'camelcase';
 import { ENTITY_INDEXING_EVENT_SUFFIX } from './Constants';
 import { IndexRepository } from '../index/IndexRepository';
 import { IndexMessage } from './Types';
@@ -17,25 +16,28 @@ export class IndexExecutor {
   ) {}
 
   async execute(rootEntityType: string, message: IndexMessage) {
-    const { id, correlationId } = message;
+    const { ids, correlationId } = message;
     try {
       this.logger.log({
         msg: 'Received entity index event',
+        ids,
         correlationId,
         payload: message,
       });
-      const { data } = await this.entityRepository.getEntityById(
+      const entities = await this.entityRepository.getEntityByIds(
         rootEntityType,
-        id,
+        ids,
       );
-      await this.indexRepository.index(
-        rootEntityType,
-        id,
-        data[camelCase(rootEntityType)],
+
+      const promises = entities.map(
+        async (entity) =>
+          await this.indexRepository.index(rootEntityType, entity.id, entity),
       );
+
+      await Promise.all(promises);
     } catch (error) {
       this.logger.error({
-        msg: `Failed to index entity ${rootEntityType}(${id})`,
+        msg: `Failed to index entity ${rootEntityType}(${ids})`,
         correlationId,
         error: error.message,
         stack: error.stack,

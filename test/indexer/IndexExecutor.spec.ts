@@ -7,15 +7,11 @@ describe('IndexExecutor', () => {
     name: 'alex',
   };
   const entityRepository: any = {
-    getEntityById: jest
+    getEntityByIds: jest
       .fn()
-      .mockImplementation((entityType: string, id: string) => {
-        if (id === 'dirtyId') throw new Error('fake error');
-        return {
-          data: {
-            user: mockEntity,
-          },
-        };
+      .mockImplementation((entityType: string, ids: string[]) => {
+        if (ids.includes('dirtyId')) throw new Error('fake error');
+        return [mockEntity];
       }),
   };
   const indexRepository: any = {
@@ -30,9 +26,9 @@ describe('IndexExecutor', () => {
       entityRepository,
       indexRepository,
       retryQueue,
-    ).execute('User', { id: '1', correlationId: 'bar' });
+    ).execute('User', { ids: ['1'], correlationId: 'bar' });
 
-    expect(entityRepository.getEntityById).toBeCalledWith('User', '1');
+    expect(entityRepository.getEntityByIds).toBeCalledWith('User', ['1']);
     expect(indexRepository.index).toBeCalledWith('User', '1', mockEntity);
   });
 
@@ -41,10 +37,10 @@ describe('IndexExecutor', () => {
       entityRepository,
       indexRepository,
       retryQueue,
-    ).execute('User', { id: 'dirtyId', correlationId: 'bar' });
+    ).execute('User', { ids: ['dirtyId'], correlationId: 'bar' });
     expect(retryQueue.push).toBeCalledWith(
       `User${ENTITY_INDEXING_EVENT_SUFFIX}`,
-      { id: 'dirtyId', correlationId: 'bar' },
+      { ids: ['dirtyId'], correlationId: 'bar' },
       new Error('fake error'),
     );
   });

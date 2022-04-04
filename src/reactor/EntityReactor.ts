@@ -24,6 +24,7 @@ export class EntityReactor {
 
   private async createStream(rootEntityType: string) {
     const brokers = this.configService.get<string>('event.brokers');
+    const indexBatchSize = this.entities[rootEntityType]?.indexBatchSize || 1;
     const kafkaStreams = new KafkaStreams(
       streamConfigurationFactory(
         brokers,
@@ -43,7 +44,7 @@ export class EntityReactor {
       .mapWrapKafkaValue()
       .asyncMap(
         async (message: EntityPublishedMessage) =>
-          await this.extractor.extract(rootEntityType, message),
+          await this.extractor.extract(rootEntityType, message, indexBatchSize),
       )
       .concatMap((messages) => {
         if (messages.length > 0) {

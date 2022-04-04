@@ -4,6 +4,7 @@ import { IndexRepository } from '../index/IndexRepository';
 import { EntityPublishedMessage } from './Types';
 import { ENTITY_PUBLISHED_EVENT } from './Constants';
 import { EntityIndexRetryQueue } from '../retryer/EntityIndexRetryQueue';
+import splitArray from 'split-array';
 
 @Injectable()
 export class MessageExtractor {
@@ -15,16 +16,21 @@ export class MessageExtractor {
     private retryQueue: EntityIndexRetryQueue,
   ) {}
 
-  async extract(rootEntityType: string, message: EntityPublishedMessage) {
+  async extract(
+    rootEntityType: string,
+    message: EntityPublishedMessage,
+    indexBatchSize = 1,
+  ) {
     const { correlationId, data } = message;
     const { entityType } = data;
     try {
       const ids = await this.resolveIds(rootEntityType, message);
-      return ids.map((id) => ({
-        key: id,
+      const idBatches = splitArray(ids, indexBatchSize);
+      return idBatches.map((idBatch) => ({
+        key: idBatch.toString(),
         value: {
           correlationId,
-          id,
+          ids: idBatch,
           rootEntityType,
           entityType,
         },
