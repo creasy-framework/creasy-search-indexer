@@ -1,10 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { KafkaStreams, KafkaStreamsConfig } from 'kafka-streams';
+import { KafkaStreams } from 'kafka-streams';
 import { ConfigService } from '@nestjs/config';
 import { INDEX_DLQ, INDEX_RETRY_QUEUE } from './Constants';
-import { ENTITY_PUBLISHED_EVENT } from '../reactor/Constants';
+import { ENTITY_CHANGED_EVENT } from '../reactor/Constants';
 import { ENTITY_INDEXING_EVENT_SUFFIX } from '../indexer/Constants';
 import { streamConfigurationFactory } from '../configuration';
+import { getJsonValueFromMessage } from '../common';
 
 @Injectable()
 export class EntityIndexRetryer {
@@ -31,7 +32,8 @@ export class EntityIndexRetryer {
     (this.streams as any).on('error', (error) =>
       this.logger.error({
         msg: 'Unexpected error in retry queue',
-        error,
+        error: error.message,
+        stack: error.stack,
       }),
     );
   }
@@ -39,15 +41,6 @@ export class EntityIndexRetryer {
   async onModuleInit() {
     await this.initRetryStream();
     this.logger.log('Index retryer started.');
-  }
-
-  private getJsonValueFromMessage(message) {
-    try {
-      const value = message?.value?.toString();
-      return JSON.parse(value);
-    } catch {
-      return {};
-    }
   }
 
   private shouldForwardToDLQ(messageValue) {
@@ -58,7 +51,7 @@ export class EntityIndexRetryer {
 
   private shouldForwardToStream(streamName: string, message) {
     try {
-      const value = this.getJsonValueFromMessage(message);
+      const value = getJsonValueFromMessage(message);
       const { targetQueue } = value;
       return targetQueue === streamName && !this.shouldForwardToDLQ(value);
     } catch {}
@@ -75,9 +68,8 @@ export class EntityIndexRetryer {
   private async initRetryStream() {
     const retryStream = this.streams.getKStream(INDEX_RETRY_QUEUE);
     const [dlqStream, reactStream, ...indexStreams] = retryStream.branch([
-      (message) =>
-        this.shouldForwardToDLQ(this.getJsonValueFromMessage(message)),
-      (message) => this.shouldForwardToStream(ENTITY_PUBLISHED_EVENT, message),
+      (message) => this.shouldForwardToDLQ(getJsonValueFromMessage(message)),
+      (message) => this.shouldForwardToStream(ENTITY_CHANGED_EVENT, message),
       ...Object.keys(this.entities).map(
         (entityType) => (message) =>
           this.shouldForwardToStream(
@@ -101,7 +93,7 @@ export class EntityIndexRetryer {
       .mapWrapKafkaValue()
       .skipRepeatsWith(this.shouldSkip)
       .asyncMap(({ originalMessage }) => this.waitAndTry(originalMessage))
-      .to(ENTITY_PUBLISHED_EVENT, 'auto', 'buffer');
+      .to(ENTITY_CHANGED_EVENT, 'auto', 'buffer');
 
     const promises = Object.keys(this.entities).map((entityType, i) => {
       return indexStreams[i]

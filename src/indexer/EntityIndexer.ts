@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { KafkaStreams } from 'kafka-streams';
 import { ConfigService } from '@nestjs/config';
-import { ENTITY_INDEXING_EVENT_SUFFIX } from './Constants';
+import {
+  ENTITY_INDEXING_EVENT_SUFFIX,
+  ENTITY_INDEX_COMPLETED_EVENT_SUFFIX,
+} from './Constants';
 import { IndexMessage } from './Types';
 import { streamConfigurationFactory } from '../configuration';
 import { IndexExecutor } from './IndexExecutor';
@@ -27,19 +30,34 @@ export class EntityIndexer {
         `${rootEntityType.toUpperCase()}_INDEXER`,
       ),
     );
-    const stream = kafkaStreams.getKStream();
-    stream
-      .from(`${rootEntityType}${ENTITY_INDEXING_EVENT_SUFFIX}`)
+    (kafkaStreams as any).on('error', (error) =>
+      this.logger.error({
+        msg: 'Unexpected error in index stream',
+        error: error.message,
+        stack: error.stack,
+      }),
+    );
+    const stream = kafkaStreams.getKStream(
+      `${rootEntityType}${ENTITY_INDEXING_EVENT_SUFFIX}`,
+    );
+    await stream
       .mapJSONConvenience()
       .mapWrapKafkaValue()
-      .forEach((message: IndexMessage) =>
-        this.executor.execute(rootEntityType, message),
+      .asyncMap(
+        async (message: IndexMessage) =>
+          await this.executor.execute(rootEntityType, message),
       )
-      .catch((error) =>
-        this.logger.error({
-          msg: 'Unexpected error in index stream',
-          error,
-        }),
+      .concatMap((messages) => {
+        this.logger.log({
+          msg: 'Entities have been indexed.',
+          entityType: rootEntityType,
+        });
+        return stream.getNewMostFrom(messages);
+      })
+      .to(
+        `${rootEntityType}${ENTITY_INDEX_COMPLETED_EVENT_SUFFIX}`,
+        'auto',
+        'buffer',
       );
     await stream.start();
     this.logger.log({ msg: `${rootEntityType} entity indexer started` });

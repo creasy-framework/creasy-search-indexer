@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import {Injectable, Logger} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client } from '@elastic/elasticsearch';
 
@@ -24,6 +24,19 @@ export class IndexRepository {
         ...entity,
       },
     });
+  }
+
+  async delete(indexName: string, docId: any) {
+    const exists = await this.esClient.exists({
+      index: indexName.toLowerCase(),
+      id: docId,
+    });
+    if (exists) {
+      await this.esClient.delete({
+        index: indexName.toLowerCase(),
+        id: docId,
+      });
+    }
   }
 
   private async searchByDependent(

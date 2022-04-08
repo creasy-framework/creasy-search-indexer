@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SchemaService } from '../entity/SchemaService';
 import { IndexRepository } from '../index/IndexRepository';
 import { EntityPublishedMessage } from './Types';
-import { ENTITY_PUBLISHED_EVENT } from './Constants';
+import { ENTITY_CHANGED_EVENT } from './Constants';
 import { EntityIndexRetryQueue } from '../retryer/EntityIndexRetryQueue';
 import splitArray from 'split-array';
 
@@ -42,7 +42,7 @@ export class MessageExtractor {
         stack: error.stack,
         correlationId,
       });
-      this.retryQueue.push(ENTITY_PUBLISHED_EVENT, message, error);
+      this.retryQueue.push(ENTITY_CHANGED_EVENT, message, error);
       return [];
     }
   }

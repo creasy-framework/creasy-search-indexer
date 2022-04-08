@@ -19,23 +19,29 @@ describe('IndexRepository', () => {
     id: '1',
     name: 'Foo',
   };
-  const mockEsClient = {
-    index: jest.fn(),
-    search: jest
-      .fn()
-      .mockImplementation(({ from }) =>
-        Promise.resolve(createMockSearchResponse(from)),
-      ),
+  let mockEsClient;
+  const configService: any = {
+    get: jest.fn().mockReturnValue('localhost'),
   };
-  describe('getIdsByDependency', () => {
-    const configService: any = {
-      get: jest.fn().mockReturnValue('localhost'),
+
+  const setUpMock = () => {
+    mockEsClient = {
+      index: jest.fn(),
+      exists: jest.fn(),
+      delete: jest.fn(),
+      search: jest
+        .fn()
+        .mockImplementation(({ from }) =>
+          Promise.resolve(createMockSearchResponse(from)),
+        ),
     };
-    beforeEach(() => {
-      (Client as any).mockReturnValue(mockEsClient);
-      indexRepository = new IndexRepository(configService);
-      indexRepository.onModuleInit();
-    });
+    (Client as any).mockReturnValue(mockEsClient);
+    indexRepository = new IndexRepository(configService);
+    indexRepository.onModuleInit();
+  };
+
+  describe('getIdsByDependency', () => {
+    beforeEach(setUpMock);
     it('index', async () => {
       await indexRepository.index('User', '1', mockEntity);
       expect(mockEsClient.index).toBeCalledWith({
@@ -65,6 +71,31 @@ describe('IndexRepository', () => {
           },
         }),
       );
+    });
+  });
+
+  describe('delete', () => {
+    beforeEach(setUpMock);
+    it('call delete if entity exists', async () => {
+      mockEsClient.exists.mockImplementation(() => true);
+      await indexRepository.delete('User', '1');
+      expect(mockEsClient.exists).toBeCalledWith({
+        index: 'user',
+        id: '1',
+      });
+      expect(mockEsClient.delete).toBeCalledWith({
+        index: 'user',
+        id: '1',
+      });
+    });
+    it('not call delete if entity exists', async () => {
+      mockEsClient.exists.mockImplementation(() => false);
+      await indexRepository.delete('User', '1');
+      expect(mockEsClient.exists).toBeCalledWith({
+        index: 'user',
+        id: '1',
+      });
+      expect(mockEsClient.delete).not.toHaveBeenCalled();
     });
   });
 });

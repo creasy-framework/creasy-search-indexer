@@ -1,5 +1,6 @@
 import { MessageExtractor } from '../../src/reactor/MessageExtractor';
-import { ENTITY_PUBLISHED_EVENT } from '../../src/reactor/Constants';
+import { ENTITY_CHANGED_EVENT } from '../../src/reactor/Constants';
+import { MUTATION_TYPE } from '../../src/reactor/Types';
 
 describe('MessageExtractor', () => {
   const schemaServices: any = {
@@ -37,6 +38,7 @@ describe('MessageExtractor', () => {
         data: {
           id: '1',
           entityType: 'User',
+          mutationType: MUTATION_TYPE.UPSERT,
         },
       },
       2,
@@ -62,6 +64,7 @@ describe('MessageExtractor', () => {
         data: {
           id: '1',
           entityType: 'Organization',
+          mutationType: MUTATION_TYPE.UPSERT,
         },
       },
       2,
@@ -97,15 +100,17 @@ describe('MessageExtractor', () => {
       data: {
         id: 'dirtyId',
         entityType: 'Organization',
+        mutationType: MUTATION_TYPE.UPSERT,
       },
     });
     expect(retryQueue.push).toBeCalledWith(
-      ENTITY_PUBLISHED_EVENT,
+      ENTITY_CHANGED_EVENT,
       {
         correlationId: 'fake',
         data: {
           id: 'dirtyId',
           entityType: 'Organization',
+          mutationType: MUTATION_TYPE.UPSERT,
         },
       },
       new Error('fake error'),

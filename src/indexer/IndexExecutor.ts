@@ -35,6 +35,14 @@ export class IndexExecutor {
       );
 
       await Promise.all(promises);
+      return ids.map((id) => ({
+        key: id.toString(),
+        value: {
+          correlationId,
+          id: id,
+          entityType: rootEntityType,
+        },
+      }));
     } catch (error) {
       this.logger.error({
         msg: `Failed to index entity ${rootEntityType}(${ids})`,
