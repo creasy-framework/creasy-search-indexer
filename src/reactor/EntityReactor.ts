@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { KafkaStreams } from 'kafka-streams';
 import { ConfigService } from '@nestjs/config';
 import {
-  ENTITY_CHANGED_EVENT, ENTITY_DELETED_EVENT_SUFFIX,
+  ENTITY_CHANGED_EVENT,
+  ENTITY_DELETED_EVENT_SUFFIX,
   ENTITY_INDEXING_EVENT_SUFFIX,
 } from './Constants';
 import { MessageExtractor } from './MessageExtractor';

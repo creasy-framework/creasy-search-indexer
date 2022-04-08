@@ -12,7 +12,7 @@ describe('MessageExtractor', () => {
     index: jest.fn(),
     getIdsByDependency: jest
       .fn()
-      .mockImplementation((indexName, dependentId, dependentPaths) => {
+      .mockImplementation((indexName, dependentId) => {
         if (dependentId === 'dirtyId') throw Error('fake error');
         return ['1', '2', '3'];
       }),

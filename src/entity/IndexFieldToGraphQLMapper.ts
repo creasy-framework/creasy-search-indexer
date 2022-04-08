@@ -3,11 +3,6 @@ import { jsonToGraphQLQuery } from 'json-to-graphql-query';
 import { FieldIndexOption } from '../configuration';
 import camelCase from 'camelcase';
 
-interface IndexFieldTree {
-  name: string;
-  children: IndexFieldTree[];
-}
-
 @Injectable()
 export class IndexFieldToGraphQLMapper {
   private createJson(path: string[], json: Record<any, any>) {
